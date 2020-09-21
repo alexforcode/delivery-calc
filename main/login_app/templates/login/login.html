@@ -1,0 +1,29 @@
+{% extends '_base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Войти{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <fieldset class="form-group">
+                <legend class="border-bottom text-center mb-4">Вход</legend>
+                {{ form | crispy }}
+            </fieldset>
+            <div class="form-group">
+                <button class="btn btn-primary" type="submit">Войти</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

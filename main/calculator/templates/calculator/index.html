@@ -1,0 +1,43 @@
+{% extends '_base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Калькулятор{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-sm-9 col-md-9 col-lg-9 mx-auto">
+    <form method="POST">
+        <h3 class="border-bottom text-center mb-4">Заполните поля</h3>
+        {% crispy form %}
+    </form>
+    </div>
+</div>
+
+{% if results %}
+<div class="row">
+    <div class="col-sm-9 col-md-9 col-lg-9 mx-auto">
+        <h3 class="border-bottom text-center mb-4 mt-4">Результат</h3>
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">Компания</th>
+                    <th scope="col">Стоимость</th>
+                    <th scope="col">Дней</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td>{{ result.name }}</td>
+                    <td>{{ result.cost }}</td>
+                    <td>{{ result.days }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
