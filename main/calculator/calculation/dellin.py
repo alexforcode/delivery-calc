@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import math
 
 import requests
 
@@ -149,6 +150,12 @@ def get_request_body(api: DellinAPI, delivery_info: dict):
                 'type': 'cash'
             }
         }
+
+        if delivery_info['cargo']['weight'] >= 100:
+            weight = delivery_info['cargo']['weight']
+            quantity = math.ceil(weight / 95)
+            body['cargo']['quantity'] = quantity
+            body['cargo']['weight'] = round(weight / quantity, 1)
 
         return body
     else:
