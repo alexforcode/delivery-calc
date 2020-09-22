@@ -21,10 +21,10 @@ class Calculator:
         self.delivery_info = delivery_info
         self.delivery_info['produce_date'] = self.get_date()
         self.calculators = [
-            # dellin_calc,
-            # pecom_calc,
-            # gtd_calc,
-            # baikal_calc,
+            dellin_calc,
+            pecom_calc,
+            gtd_calc,
+            baikal_calc,
             nrgtk_calc,
             # mgtrans_calc,
         ]
