@@ -30,8 +30,12 @@
                 {% for result in results %}
                 <tr>
                     <td>{{ result.name }}</td>
-                    <td>{{ result.cost }}</td>
-                    <td>{{ result.days }}</td>
+                    {% if result.error != ""%}
+                        <td colspan="2">{{ result.error }}</td>
+                    {% else %}
+                        <td>{{ result.cost }}</td>
+                        <td>{{ result.days }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>

@@ -14,6 +14,10 @@ class PecomAPI:
         self.base_api_url = 'https://kabinet.pecom.ru/api/v1'
         self.login = config['pecom']['login']
         self.apikey = config['pecom']['apikey']
+        self.error = ''
+
+    def get_error(self):
+        return self.error
 
     def get_branch_id(self, city: str):
         """ Get id of terminal branch in city
@@ -32,7 +36,11 @@ class PecomAPI:
                 try:
                     return int(cities['items'][0]['branchId'])
                 except IndexError or KeyError:
-                    return None
+                    self.error = f'{city}: нет терминала'
+            else:
+                self.error = self.error = f'{city}: нет терминала'
+        else:
+            self.error = 'Ошибка соединения'
 
         return None
 
@@ -42,15 +50,21 @@ class PecomAPI:
         Return: results or None
         """
         url = f'{self.base_api_url}/calculator/calculateprice/'
-        resp = requests.post(url,
-                             auth=(self.login, self.apikey),
-                             json=body,
-                             headers={'content-type': 'application/json'})
 
-        if resp.status_code == 200:
-            resp_json = resp.json()
-            if 'error' not in resp_json.keys():
-                return resp_json
+        if not self.error:
+            resp = requests.post(url,
+                                 auth=(self.login, self.apikey),
+                                 json=body,
+                                 headers={'content-type': 'application/json'})
+
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                if 'error' not in resp_json.keys():
+                    return resp_json
+                else:
+                    self.error = 'Ошибка соединения'
+            else:
+                self.error = 'Ошибка соединения'
 
         return None
 
@@ -61,48 +75,54 @@ def get_request_body(api: PecomAPI, delivery_info: dict):
     delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
     Return: request body
     """
-    body = {
-        'senderCityId': api.get_branch_id(delivery_info['derival_city'].capitalize()),
-        'receiverCityId': api.get_branch_id(delivery_info['arrival_city'].capitalize()),
-        'isOpenCarSender': False,
-        'senderDistanceType': 0,
-        'isDayByDay': False,
-        'isOpenCarReceiver': False,
-        'receiverDistanceType': 0,
-        'isHyperMarket': False,
-        'calcDate': delivery_info['produce_date'],
-        'isInsurance': False,
-        'isInsurancePrice': 0,
-        'isPickUp': False,
-        'isDelivery': False,
-        'pickupServices': {
-            'isLoading': False,
-            'floor': 0,
-            'carryingDistance': 0,
-            'isElevator': False
-        },
-        'deliveryServices': {
-            'isLoading': False,
-            'floor': 0,
-            'carryingDistance': 0,
-            'isElevator': False
-        },
-        'Cargos': [{
-            'length': delivery_info['cargo']['length'],
-            'width': delivery_info['cargo']['width'],
-            'height': delivery_info['cargo']['height'],
-            'volume': delivery_info['cargo']['volume'],
-            'maxSize': max(delivery_info['cargo']['length'],
-                           delivery_info['cargo']['width'],
-                           delivery_info['cargo']['height']),
-            'isHP': False,
-            'sealingPositionsCount': 0,
-            'weight': delivery_info['cargo']['weight'],
-            'overSize': False
-        }]
-    }
+    derival_city_id = api.get_branch_id(delivery_info['derival_city'].capitalize())
+    arrival_city_id = api.get_branch_id(delivery_info['arrival_city'].capitalize())
 
-    return body
+    if derival_city_id and arrival_city_id:
+        body = {
+            'senderCityId': derival_city_id,
+            'receiverCityId': arrival_city_id,
+            'isOpenCarSender': False,
+            'senderDistanceType': 0,
+            'isDayByDay': False,
+            'isOpenCarReceiver': False,
+            'receiverDistanceType': 0,
+            'isHyperMarket': False,
+            'calcDate': delivery_info['produce_date'],
+            'isInsurance': False,
+            'isInsurancePrice': 0,
+            'isPickUp': False,
+            'isDelivery': False,
+            'pickupServices': {
+                'isLoading': False,
+                'floor': 0,
+                'carryingDistance': 0,
+                'isElevator': False
+            },
+            'deliveryServices': {
+                'isLoading': False,
+                'floor': 0,
+                'carryingDistance': 0,
+                'isElevator': False
+            },
+            'Cargos': [{
+                'length': delivery_info['cargo']['length'],
+                'width': delivery_info['cargo']['width'],
+                'height': delivery_info['cargo']['height'],
+                'volume': delivery_info['cargo']['volume'],
+                'maxSize': max(delivery_info['cargo']['length'],
+                               delivery_info['cargo']['width'],
+                               delivery_info['cargo']['height']),
+                'isHP': False,
+                'sealingPositionsCount': 0,
+                'weight': delivery_info['cargo']['weight'],
+                'overSize': False
+            }]
+        }
+
+        return body
+    else:
+        return None
 
 
 def pecom_calc(config, delivery_info: dict):
@@ -114,14 +134,23 @@ def pecom_calc(config, delivery_info: dict):
     result = {
         'name': 'ПЭК',
         'cost': 'Ошибка',
-        'days': 'Ошибка'
+        'days': 'Ошибка',
+        'error': ''
     }
 
     api = PecomAPI(config)
-    request_body = get_request_body(api, delivery_info)
-    calculation = api.calculate(request_body)
 
-    if calculation:
+    request_body = get_request_body(api, delivery_info)
+    if not request_body:
+        result['error'] = api.get_error()
+        return result
+
+    calculation = api.calculate(request_body)
+    if not calculation:
+        result['error'] = api.get_error()
+        return result
+
+    try:
         cost = 0
         for transfer in calculation['transfers']:
             if transfer['transportingType'] == 1:
@@ -129,5 +158,7 @@ def pecom_calc(config, delivery_info: dict):
 
         result['cost'] = f'{cost:.2f}'
         result['days'] = calculation["commonTerms"][0]["transporting"][0]
+    except KeyError or IndexError:
+        result['error'] = 'Ошибка расчета данных'
 
     return result

@@ -2,7 +2,6 @@ from configparser import ConfigParser
 from datetime import date, timedelta
 from queue import Queue
 from threading import Thread
-import time
 
 from .dellin import dellin_calc
 from .pecom import pecom_calc
@@ -22,10 +21,10 @@ class Calculator:
         self.delivery_info = delivery_info
         self.delivery_info['produce_date'] = self.get_date()
         self.calculators = [
-            dellin_calc,
-            pecom_calc,
-            gtd_calc,
-            baikal_calc,
+            # dellin_calc,
+            # pecom_calc,
+            # gtd_calc,
+            # baikal_calc,
             nrgtk_calc,
             # mgtrans_calc,
         ]
@@ -47,8 +46,6 @@ class Calculator:
         concatenate them in self.result string.
         Return: result massage
         """
-        start = time.time()
-
         thread_count = len(self.calculators)
         work_queue = Queue()
         result_queue = Queue()
@@ -64,8 +61,6 @@ class Calculator:
 
         while not result_queue.empty():
             self.result.append(result_queue.get_nowait())
-
-        print(time.time() - start)
 
         return sorted(self.result, key=lambda x: x['name'])
 

@@ -17,6 +17,10 @@ class DellinAPI:
         self.login = config['dellin']['login']
         self.password = config['dellin']['pass']
         self.session_id = self.get_session_id()
+        self.error = ''
+
+    def get_error(self):
+        return self.error
 
     def get_session_id(self):
         """ Get session id for future api requests
@@ -34,6 +38,8 @@ class DellinAPI:
         if resp.status_code == 200:
             resp_json = resp.json()
             return resp_json['data']['sessionID']
+        else:
+            self.error = 'Ошибка соединения'
 
         return None
 
@@ -55,7 +61,9 @@ class DellinAPI:
             try:
                 return resp_json['cities'][0]['code']
             except IndexError or KeyError:
-                return None
+                self.error = f'{city}: нет терминала'
+        else:
+            self.error = 'Ошибка соединения'
 
         return None
 
@@ -65,12 +73,16 @@ class DellinAPI:
         Return: calculation result or None
         """
         url = f'{self.base_api_url}/v2/calculator.json'
-        resp = requests.post(url,
-                             json=body,
-                             headers={'content-type': 'application/json'})
 
-        if resp.status_code == 200:
-            return resp.json()
+        if not self.error:
+            resp = requests.post(url,
+                                 json=body,
+                                 headers={'content-type': 'application/json'})
+
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                self.error = 'Ошибка соединения'
 
         return None
 
@@ -101,43 +113,46 @@ def get_request_body(api: DellinAPI, delivery_info: dict):
     arrival_code = api.get_city_code(delivery_info['arrival_city'])
     derival_code = api.get_city_code(delivery_info['derival_city'])
 
-    body = {
-        'appkey': api.appkey,
-        'sessionID': api.session_id,
-        'delivery': {
-            'deliveryType': {
-                'type': 'auto'
+    if arrival_code and derival_code:
+        body = {
+            'appkey': api.appkey,
+            'sessionID': api.session_id,
+            'delivery': {
+                'deliveryType': {
+                    'type': 'auto'
+                },
+                'arrival': {
+                    'variant': 'terminal',
+                    'city': arrival_code,
+                },
+                'derival': {
+                    'produceDate': delivery_info['produce_date'],
+                    'variant': 'terminal',
+                    'terminalID': get_terminal_id(derival_code)
+                },
             },
-            'arrival': {
-                'variant': 'terminal',
-                'city': arrival_code,
+            'members': {
+                'requester': {
+                    'role': 'sender'
+                }
             },
-            'derival': {
-                'produceDate': delivery_info['produce_date'],
-                'variant': 'terminal',
-                'terminalID': get_terminal_id(derival_code)
+            'cargo': {
+                'length': delivery_info['cargo']['length'],
+                'width': delivery_info['cargo']['width'],
+                'height': delivery_info['cargo']['height'],
+                'totalVolume': delivery_info['cargo']['volume'],
+                'totalWeight': delivery_info['cargo']['weight'],
+                'hazardClass': 0
             },
-        },
-        'members': {
-            'requester': {
-                'role': 'sender'
+            'payment': {
+                'paymentCity': arrival_code,
+                'type': 'cash'
             }
-        },
-        'cargo': {
-            'length': delivery_info['cargo']['length'],
-            'width': delivery_info['cargo']['width'],
-            'height': delivery_info['cargo']['height'],
-            'totalVolume': delivery_info['cargo']['volume'],
-            'totalWeight': delivery_info['cargo']['weight'],
-            'hazardClass': 0
-        },
-        'payment': {
-            'paymentCity': arrival_code,
-            'type': 'cash'
         }
-    }
 
-    return body
+        return body
+    else:
+        return None
 
 
 def dellin_calc(config, delivery_info: dict):
@@ -149,33 +164,47 @@ def dellin_calc(config, delivery_info: dict):
     result = {
         'name': 'Деловые Линии',
         'cost': 'Ошибка',
-        'days': 'Ошибка'
+        'days': 'Ошибка',
+        'error': ''
     }
 
     api = DellinAPI(config)
 
-    if api.session_id:
-        request_body = get_request_body(api, delivery_info)
+    if not api.session_id:
+        result['error'] = api.get_error()
+        return result
 
-        calculation = api.calculate(request_body)
-        print(calculation)
-        if calculation:
-            derival_date = datetime.datetime.strptime(
-                delivery_info['produce_date'],
-                '%Y-%m-%d'
-            )
-            arrival_date = datetime.datetime.strptime(
-                calculation['data']['orderDates']['arrivalToOspReceiver'],
-                '%Y-%m-%d'
-            )
-            days_delta = arrival_date - derival_date
+    request_body = get_request_body(api, delivery_info)
 
-            intercity_price = calculation['data']['intercity']['price'] * 0.7  # 30% discount
-            insurance_price = calculation['data']['insurance']
-            notify_price = calculation['data']['notify']['price']
-            total_price = round(intercity_price + insurance_price + notify_price, 2)
+    if not request_body:
+        result['error'] = api.get_error()
+        return result
 
-            result['cost'] = f'{total_price:.2f}'
-            result['days'] = days_delta.days
+    calculation = api.calculate(request_body)
+
+    if not calculation:
+        result['error'] = api.get_error()
+        return result
+
+    try:
+        derival_date = datetime.datetime.strptime(
+            delivery_info['produce_date'],
+            '%Y-%m-%d'
+        )
+        arrival_date = datetime.datetime.strptime(
+            calculation['data']['orderDates']['arrivalToOspReceiver'],
+            '%Y-%m-%d'
+        )
+        days_delta = arrival_date - derival_date
+
+        intercity_price = calculation['data']['intercity']['price'] * 0.7  # 30% discount
+        insurance_price = calculation['data']['insurance']
+        notify_price = calculation['data']['notify']['price']
+        total_price = round(intercity_price + insurance_price + notify_price, 2)
+
+        result['cost'] = f'{total_price:.2f}'
+        result['days'] = days_delta.days
+    except KeyError or IndexError:
+        result['error'] = 'Ошибка расчета данных'
 
     return result
