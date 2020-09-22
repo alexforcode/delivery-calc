@@ -16,3 +16,4 @@ main/static
 main/config
 tests
 main/main/settings/local.py
+main/main/settings/pro.py
