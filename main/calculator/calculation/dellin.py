@@ -83,7 +83,7 @@ class DellinAPI:
             if resp.status_code == 200:
                 return resp.json()
             else:
-                self.error = 'Ошибка соединения'
+                self.error = 'Ошибка расчета'
 
         return None
 
@@ -151,9 +151,9 @@ def get_request_body(api: DellinAPI, delivery_info: dict):
             }
         }
 
-        if delivery_info['cargo']['weight'] >= 100:
+        if delivery_info['cargo']['weight'] >= 80:
             weight = delivery_info['cargo']['weight']
-            quantity = math.ceil(weight / 95)
+            quantity = math.ceil(weight / 75)
             body['cargo']['quantity'] = quantity
             body['cargo']['weight'] = round(weight / quantity, 1)
 
