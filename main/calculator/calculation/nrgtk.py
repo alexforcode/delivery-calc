@@ -142,10 +142,15 @@ def nrgtk_calc(config, delivery_info: dict):
         return result
 
     try:
-        cost = round(float(calculation['transfer'][0]['price']), 2)
-        days = calculation['transfer'][0]['interval'].split()[0]
-        result['cost'] = f'{cost:.2f}'
-        result['days'] = days
+        for transfer in calculation['transfer']:
+            if transfer['typeId'] == 1:
+                cost = round(float(transfer['price']), 2)
+                days = transfer['interval'].split()[0]
+                result['cost'] = f'{cost:.2f}'
+                result['days'] = days
+                break
+        else:
+            result['error'] = 'Ошибка расчета данных'
     except KeyError or IndexError:
         result['error'] = 'Ошибка расчета данных'
 
