@@ -150,7 +150,7 @@ def nrgtk_calc(config, delivery_info: dict):
                 result['days'] = days
                 break
         else:
-            result['error'] = 'Ошибка расчета данных'
+            result['error'] = 'Ошибка: нет автодоставки'
     except KeyError or IndexError:
         result['error'] = 'Ошибка расчета данных'
 

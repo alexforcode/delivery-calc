@@ -1,7 +1,5 @@
 # https://kabinet.pecom.ru/api/v1/help/calculator#toc-method-calculateprice
 
-import json
-
 import requests
 
 
