@@ -3,22 +3,30 @@ import requests
 
 class NrgtkAPI:
     """ Class provides communicate with API service """
-    def __init__(self, config):
+    def __init__(self, config, delivery_info: dict):
         """
         config: instance of ConfigParser, reading config.ini
+        delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
         """
+        self.result = {
+            'name': 'Энергия',
+            'cost': 'Ошибка',
+            'days': 'Ошибка',
+            'error': ''
+        }
         self.base_api_url = 'https://mainapi.nrg-tk.ru/v3'
         self.dev_token = config['nrgtk']['dev_token']
         self.user = config['nrgtk']['login']
         self.password = config['nrgtk']['pass']
         self.request_header = {'NrgApi-DevToken': self.dev_token}
-        self.user_token, self.account_id = self.user_login()
-        self.error = ''
+        self.user_token, self.account_id = self._user_login()
+        self.derival_city = delivery_info['derival_city']
+        self.arrival_city = delivery_info['arrival_city']
+        self.cargo = delivery_info['cargo']
+        self.date = delivery_info['produce_date']
+        self.body = self._get_request_body()
 
-    def get_error(self):
-        return self.error
-
-    def user_login(self):
+    def _user_login(self):
         """ Get token and accountId to communicate with API
         Return: (user_token, account_id) or (None, None)
         """
@@ -33,17 +41,17 @@ class NrgtkAPI:
             resp_json = resp.json()
             return resp_json['token'], resp_json['accountId']
         else:
-            self.error = 'Ошибка соединения'
+            self.result['error'] = 'Ошибка соединения'
 
         return None, None
 
-    def user_logout(self):
+    def _user_logout(self):
         """ Logout user and delete all opened sessions
         """
         url = f'{self.base_api_url}/{self.account_id}/logout'
         requests.get(url, headers=self.request_header, params={'token': self.user_token})
 
-    def get_cities_id(self, check_city):
+    def _get_cities_id(self, check_city: str):
         """ Get city ids of derival and arrival cities
         check_city: city name
         Return: city id or None
@@ -59,99 +67,80 @@ class NrgtkAPI:
                     city_id = city['id']
                     return city_id
             if not city_id:
-                self.error = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет терминала'
         else:
-            self.error = 'Ошибка соединения'
+            self.result['error'] = 'Ошибка соединения'
 
         return None
 
-    def calculate(self, body):
+    def _get_request_body(self):
+        """ Create final body for request to API
+        Return: request body
+        """
+        derival_id = self._get_cities_id(self.derival_city)
+        arrival_id = self._get_cities_id(self.arrival_city)
+
+        if derival_id and arrival_id:
+
+            body = {
+                'idCityFrom': derival_id,
+                'idCityTo': arrival_id,
+                'cover': 0,
+                'items': [
+                    {
+                        'weight': self.cargo['weight'],
+                        'width': self.cargo['width'],
+                        'height': self.cargo['width'],
+                        'length': self.cargo['length'],
+                        'isStandardSize': True
+                    }
+                ],
+            }
+
+            return body
+        else:
+            return None
+
+    def _get_delivery_calc(self):
         """ Get results of calculation in json format
-        body: data for request
         Return: results or None
         """
         url = f'{self.base_api_url}/price'
 
-        if not self.error:
-            resp = requests.post(url, headers=self.request_header, json=body)
-            self.user_logout()
+        if not self.result['error']:
+            resp = requests.post(url, headers=self.request_header, json=self.body)
+            self._user_logout()
 
             if resp.status_code == 200:
                 return resp.json()
             else:
-                self.error = 'Ошибка соединения'
+                self.result['error'] = 'Ошибка соединения'
 
-        self.user_logout()
+        self._user_logout()
         return None
 
+    def calculate(self):
+        """ Main function to calculate delivery cost and time
+        Return: result dictionary
+        """
+        if not self.body:
+            return self.result
 
-def get_request_body(api: NrgtkAPI, delivery_info: dict):
-    """ Get final body for request to API
-    api: NrgtkAPI instance to communicate with API
-    delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
-    Return: request body
-    """
-    derival_id = api.get_cities_id(delivery_info['derival_city'])
-    arrival_id = api.get_cities_id(delivery_info['arrival_city'])
+        calculation = self._get_delivery_calc()
+        if not calculation:
+            return self.result
 
-    if derival_id and arrival_id:
+        try:
+            for transfer in calculation['transfer']:
+                if transfer['typeId'] == 1:
+                    cost = round(float(transfer['price']), 2)
+                    days = transfer['interval'].split()[0]
+                    self.result['cost'] = f'{cost:.2f}'
+                    self.result['days'] = days
+                    break
+            else:
+                self.result['error'] = 'Ошибка: нет автодоставки'
+        except KeyError or IndexError:
+            self.result['error'] = 'Ошибка расчета данных'
 
-        body = {
-            'idCityFrom': derival_id,
-            'idCityTo': arrival_id,
-            'cover': 0,
-            'items': [
-                {
-                    'weight': delivery_info['cargo']['weight'],
-                    'width': delivery_info['cargo']['width'],
-                    'height': delivery_info['cargo']['width'],
-                    'length': delivery_info['cargo']['length'],
-                    'isStandardSize': True
-                }
-            ],
-        }
-
-        return body
-    else:
-        return None
-
-
-def nrgtk_calc(config, delivery_info: dict):
-    """ Main function to calculate delivery cost and time
-    config: instance of ConfigParser, reading config.ini
-    delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
-    Return: result dictionary
-    """
-    result = {
-        'name': 'Энергия',
-        'cost': 'Ошибка',
-        'days': 'Ошибка',
-        'error': ''
-    }
-
-    api = NrgtkAPI(config)
-
-    request_body = get_request_body(api, delivery_info)
-    if not request_body:
-        result['error'] = api.get_error()
-        return result
-
-    calculation = api.calculate(request_body)
-    if not calculation:
-        result['error'] = api.get_error()
-        return result
-
-    try:
-        for transfer in calculation['transfer']:
-            if transfer['typeId'] == 1:
-                cost = round(float(transfer['price']), 2)
-                days = transfer['interval'].split()[0]
-                result['cost'] = f'{cost:.2f}'
-                result['days'] = days
-                break
-        else:
-            result['error'] = 'Ошибка: нет автодоставки'
-    except KeyError or IndexError:
-        result['error'] = 'Ошибка расчета данных'
-
-    return result
+        return self.result

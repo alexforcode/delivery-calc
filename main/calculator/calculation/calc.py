@@ -3,12 +3,11 @@ from datetime import date, timedelta
 from queue import Queue
 from threading import Thread
 
-from .dellin import dellin_calc
-from .pecom import pecom_calc
-from .gtd import gtd_calc
-from .baikal import baikal_calc
-from .nrgtk import nrgtk_calc
-# from .mgtrans import mgtrans_calc
+from .dellin import DellinAPI
+from .pecom import PecomAPI
+from .gtd import GtdAPI
+from .baikal import BaikalAPI
+from .nrgtk import NrgtkAPI
 
 
 class Calculator:
@@ -21,12 +20,11 @@ class Calculator:
         self.delivery_info = delivery_info
         self.delivery_info['produce_date'] = self.get_date()
         self.calculators = [
-            dellin_calc,
-            pecom_calc,
-            gtd_calc,
-            baikal_calc,
-            nrgtk_calc,
-            # mgtrans_calc,
+            DellinAPI,
+            PecomAPI,
+            GtdAPI,
+            BaikalAPI,
+            NrgtkAPI,
         ]
         self.result = []
 
@@ -36,8 +34,9 @@ class Calculator:
         param: queue to put results from calc functions
         """
         while not work.empty():
-            calc = work.get_nowait()
-            res = calc(self.config, self.delivery_info)
+            api_class = work.get_nowait()
+            api = api_class(self.config, self.delivery_info)
+            res = api.calculate()
             result.put_nowait(res)
             work.task_done()
 
