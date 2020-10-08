@@ -2,31 +2,24 @@
 
 import requests
 
+from .api import DeliveryAPI
 
-class GtdAPI:
+
+class GtdAPI(DeliveryAPI):
     """ Class provides communicate with API service """
     def __init__(self, config, delivery_info: dict):
         """
         config: instance of ConfigParser, reading config.ini
         delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
         """
-        self.result = {
-            'name': 'GTD',
-            'cost': 'Ошибка',
-            'days': 'Ошибка',
-            'error': ''
-        }
         self.base_api_url = 'https://capi.gtdel.com/1.0'
         self.apikey = config['gtd']['apikey']
         self.request_headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.apikey}'
         }
-        self.derival_city = delivery_info['derival_city']
-        self.arrival_city = delivery_info['arrival_city']
-        self.cargo = delivery_info['cargo']
-        self.date = delivery_info['produce_date']
-        self.body = self._get_request_body()
+        super().__init__(delivery_info)
+        self.result['name'] = 'GTD'
 
     def _get_city_codes(self, check_city: str):
         """ Get city codes of derival and arrival cities

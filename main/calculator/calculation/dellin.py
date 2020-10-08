@@ -6,30 +6,23 @@ import math
 
 import requests
 
+from .api import DeliveryAPI
 
-class DellinAPI:
+
+class DellinAPI(DeliveryAPI):
     """ Class provides communicate with API service """
     def __init__(self, config, delivery_info):
         """
         config: instance of ConfigParser, reading config.ini
         delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
         """
-        self.result = {
-            'name': 'Деловые Линии',
-            'cost': 'Ошибка',
-            'days': 'Ошибка',
-            'error': ''
-        }
         self.base_api_url = 'https://api.dellin.ru'
         self.appkey = config['dellin']['appkey']
         self.login = config['dellin']['login']
         self.password = config['dellin']['pass']
-        self.derival_city = delivery_info['derival_city']
-        self.arrival_city = delivery_info['arrival_city']
-        self.cargo = delivery_info['cargo']
-        self.date = delivery_info['produce_date']
         self.session_id = self._get_session_id()
-        self.body = self._get_request_body()
+        super().__init__(delivery_info)
+        self.result['name'] = 'Деловые Линии'
 
     def _get_session_id(self):
         """ Get session id for future api requests

@@ -2,28 +2,21 @@
 
 import requests
 
+from .api import DeliveryAPI
 
-class PecomAPI:
+
+class PecomAPI(DeliveryAPI):
     """ Class provides communicate with API service """
     def __init__(self, config, delivery_info: dict):
         """
         config: instance of ConfigParser, reading config.ini
         delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
         """
-        self.result = {
-            'name': 'ПЭК',
-            'cost': 'Ошибка',
-            'days': 'Ошибка',
-            'error': ''
-        }
         self.base_api_url = 'https://kabinet.pecom.ru/api/v1'
         self.login = config['pecom']['login']
         self.apikey = config['pecom']['apikey']
-        self.derival_city = delivery_info['derival_city']
-        self.arrival_city = delivery_info['arrival_city']
-        self.cargo = delivery_info['cargo']
-        self.date = delivery_info['produce_date']
-        self.body = self._get_request_body()
+        super().__init__(delivery_info)
+        self.result['name'] = 'ПЭК'
 
     def _get_branch_id(self, city: str):
         """ Get id of terminal branch in city

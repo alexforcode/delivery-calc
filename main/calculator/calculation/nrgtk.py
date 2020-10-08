@@ -1,30 +1,23 @@
 import requests
 
+from .api import DeliveryAPI
 
-class NrgtkAPI:
+
+class NrgtkAPI(DeliveryAPI):
     """ Class provides communicate with API service """
     def __init__(self, config, delivery_info: dict):
         """
         config: instance of ConfigParser, reading config.ini
         delivery_info: info about delivery (arrival_city, derival_city, produce_date, cargo specs)
         """
-        self.result = {
-            'name': 'Энергия',
-            'cost': 'Ошибка',
-            'days': 'Ошибка',
-            'error': ''
-        }
         self.base_api_url = 'https://mainapi.nrg-tk.ru/v3'
         self.dev_token = config['nrgtk']['dev_token']
         self.user = config['nrgtk']['login']
         self.password = config['nrgtk']['pass']
         self.request_header = {'NrgApi-DevToken': self.dev_token}
         self.user_token, self.account_id = self._user_login()
-        self.derival_city = delivery_info['derival_city']
-        self.arrival_city = delivery_info['arrival_city']
-        self.cargo = delivery_info['cargo']
-        self.date = delivery_info['produce_date']
-        self.body = self._get_request_body()
+        super().__init__(delivery_info)
+        self.result['name'] = 'Энергия'
 
     def _user_login(self):
         """ Get token and accountId to communicate with API
