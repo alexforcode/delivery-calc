@@ -82,7 +82,6 @@ class DellinAPI(DeliveryAPI):
         city_code: kladr code of city
         Return: terminal id or None
         """
-        # TODO: update file terminal_v3.json each month: https://dev.dellin.ru/api/catalogs/pvz/
         with open('assets/data/terminals_v3.json', 'r') as f:
             content = f.read()
             cities = json.loads(content)

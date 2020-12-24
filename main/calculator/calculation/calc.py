@@ -20,11 +20,11 @@ class Calculator:
         self.delivery_info = delivery_info
         self.delivery_info['produce_date'] = self.get_date()
         self.calculators = [
-            # DellinAPI,
+            DellinAPI,
             PecomAPI,
-            # GtdAPI,
-            # BaikalAPI,
-            # NrgtkAPI,
+            GtdAPI,
+            BaikalAPI,
+            NrgtkAPI,
         ]
         self.result = []
 
