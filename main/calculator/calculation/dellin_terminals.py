@@ -27,7 +27,7 @@ def download_file(url, path_to_save):
 
 def main():
     config = ConfigParser()
-    config.read('/assets/data/config.ini')
+    config.read('/home/alex/dev/py-projects/dj-login/main/assets/data/config.ini')
     file_url = get_file_url(config['dellin']['appkey'])
     download_file(file_url, config['paths']['terminal_v3'])
 
