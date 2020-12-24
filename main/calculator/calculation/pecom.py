@@ -18,7 +18,24 @@ class PecomAPI(DeliveryAPI):
         super().__init__(delivery_info)
         self.result['name'] = 'ПЭК'
 
-    def _get_branch_id(self, city: str):
+    def _check_branch_region(self, branch_id: str, region: str):
+        """ Check if branch in region
+        Return: True if branch in region or False
+        """
+        url = f'{self.base_api_url}/branches/all/'
+        resp = requests.post(url,
+                             auth=(self.login, self.apikey),
+                             headers={'content-type': 'application/json'})
+        if resp.status_code == 200:
+            branches = resp.json()['branches']
+            for branch in branches:
+                if branch['bitrixId'] == branch_id and \
+                        region in branch['divisions'][0]['warehouses'][0]['addressDivision'].lower():
+                    return True
+
+        return False
+
+    def _get_city_id(self, check_city: str, check_region: str):
         """ Get id of terminal branch in city
         city: city name
         Return: branch id or None
@@ -26,18 +43,25 @@ class PecomAPI(DeliveryAPI):
         url = f'{self.base_api_url}/branches/findbytitle/'
         resp = requests.post(url,
                              auth=(self.login, self.apikey),
-                             json={'title': city},
+                             json={'title': check_city, 'exact': False},
                              headers={'content-type': 'application/json'})
 
         if resp.status_code == 200:
             cities = resp.json()
             if cities['success']:
                 try:
-                    return int(cities['items'][0]['branchId'])
+                    if len(cities['items']) > 1 and check_region:
+                        region = self._get_clean_region(check_region)
+                        for city in cities['items']:
+                            if self._check_branch_region(city['branchId'], region):
+                                return int(city['branchId'])
+                        self.result['error'] = f'{check_city} ({check_region}): нет терминала'
+                    else:
+                        return int(cities['items'][0]['branchId'])
                 except IndexError or KeyError:
-                    self.result['error'] = f'{city}: нет терминала'
+                    self.result['error'] = f'{check_city}: нет терминала'
             else:
-                self.result['error'] = f'{city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет терминала'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -47,8 +71,8 @@ class PecomAPI(DeliveryAPI):
         """ Create final body for request to API
         Return: request body
         """
-        derival_city_id = self._get_branch_id(self.derival_city.capitalize())
-        arrival_city_id = self._get_branch_id(self.arrival_city.capitalize())
+        derival_city_id = self._get_city_id(self.derival_city, self.derival_region)
+        arrival_city_id = self._get_city_id(self.arrival_city, self.arrival_region)
 
         if derival_city_id and arrival_city_id:
             body = {

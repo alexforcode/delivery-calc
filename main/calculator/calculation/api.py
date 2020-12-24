@@ -15,6 +15,8 @@ class DeliveryAPI(metaclass=ABCMeta):
         }
         self.derival_city = delivery_info['derival_city']
         self.arrival_city = delivery_info['arrival_city']
+        self.derival_region = delivery_info['derival_region']
+        self.arrival_region = delivery_info['arrival_region']
         self.cargo = delivery_info['cargo']
         self.date = delivery_info['produce_date']
         self.body = self._get_request_body()
@@ -30,3 +32,16 @@ class DeliveryAPI(metaclass=ABCMeta):
     @abstractmethod
     def calculate(self):
         pass
+
+    @staticmethod
+    def _get_clean_region(region: str):
+        """ Get region for search in api json
+        region: region name
+        Return: cleaned region name for search
+        """
+        region = region.lower()
+        check_list = ['край', 'область', 'округ', 'республика']
+        if any([x in region for x in check_list]):
+            region = region.split(' ')[0]
+
+        return region

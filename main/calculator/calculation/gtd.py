@@ -21,22 +21,53 @@ class GtdAPI(DeliveryAPI):
         super().__init__(delivery_info)
         self.result['name'] = 'GTD'
 
-    def _get_city_codes(self, check_city: str):
-        """ Get city codes of derival and arrival cities
-        city: city name
+    def _get_region_code(self, check_region: str):
+        """ Get region code for region
+        check_region: region name
+        Return: region code or None
+        """
+        check_region = self._get_clean_region(check_region)
+        url = f'{self.base_api_url}/tdd/region/get-list/'
+        resp = requests.post(url, headers=self.request_headers)
+
+        if resp.status_code == 200:
+            regions = resp.json()
+
+            for region in regions:
+                if check_region in region['name'].lower():
+                    code = region['code']
+                    return code
+        else:
+            self.result['error'] = 'Ошибка соединения'
+
+        return None
+
+    def _get_city_code(self, check_city: str, check_region: str):
+        """ Get city codes for city
+        check_city: city name
+        check_region: region name
         Return: city code or None
         """
         url = f'{self.base_api_url}/tdd/city/get-list/'
         resp = requests.post(url, headers=self.request_headers)
 
         if resp.status_code == 200:
+            region_code = None
+            if check_region:
+                region_code = self._get_region_code(check_region)
+
             cities = resp.json()
             code = 0
 
             for city in cities:
-                if city['name'].lower().startswith(check_city.lower()):
-                    code = city['code']
-                    return code
+                if region_code:
+                    if city['name'].lower().startswith(check_city.lower()) and city['region_code'] == region_code:
+                        code = city['code']
+                        return code
+                else:
+                    if city['name'].lower().startswith(check_city.lower()):
+                        code = city['code']
+                        return code
 
             if not code:
                 self.result['error'] = f'{check_city}: нет терминала'
@@ -49,8 +80,8 @@ class GtdAPI(DeliveryAPI):
         """ Create final body for request to API
         Return: request body
         """
-        derival_code = self._get_city_codes(self.derival_city)
-        arrival_code = self._get_city_codes(self.arrival_city)
+        derival_code = self._get_city_code(self.derival_city, self.derival_region)
+        arrival_code = self._get_city_code(self.arrival_city, self.arrival_region)
 
         if derival_code and arrival_code:
             body = {

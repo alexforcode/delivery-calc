@@ -45,7 +45,7 @@ class DellinAPI(DeliveryAPI):
 
         return None
 
-    def _get_city_code(self, city: str):
+    def _get_city_code(self, check_city: str, check_region: str):
         """ Get code of city
         city: city name
         Return: city code or None
@@ -54,16 +54,23 @@ class DellinAPI(DeliveryAPI):
 
         resp = requests.post(url,
                              json={'appkey': self.appkey,
-                                   'q': city.lower(),
-                                   'limit': 5},
+                                   'q': check_city.lower()},
                              headers={'content-type': 'application/json'})
 
         if resp.status_code == 200:
             resp_json = resp.json()
             try:
-                return resp_json['cities'][0]['code']
+                if check_region:
+                    region = self._get_clean_region(check_region)
+                    for city_json in resp_json['cities']:
+                        if region in city_json['region_name'].lower():
+                            return city_json['code']
+
+                    self.result['error'] = f'{check_city} ({check_region}): нет терминала'
+                else:
+                    return resp_json['cities'][0]['code']
             except IndexError or KeyError:
-                self.result['error'] = f'{city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет терминала'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -90,8 +97,8 @@ class DellinAPI(DeliveryAPI):
         """ Create final body for request to API
         Return: request body
         """
-        arrival_code = self._get_city_code(self.arrival_city)
-        derival_code = self._get_city_code(self.derival_city)
+        arrival_code = self._get_city_code(self.arrival_city, self.arrival_region)
+        derival_code = self._get_city_code(self.derival_city, self.derival_region)
 
         if arrival_code and derival_code:
             body = {

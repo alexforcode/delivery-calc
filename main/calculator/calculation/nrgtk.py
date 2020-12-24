@@ -44,7 +44,7 @@ class NrgtkAPI(DeliveryAPI):
         url = f'{self.base_api_url}/{self.account_id}/logout'
         requests.get(url, headers=self.request_header, params={'token': self.user_token})
 
-    def _get_cities_id(self, check_city: str):
+    def _get_cities_id(self, check_city: str, check_region: str):
         """ Get city ids of derival and arrival cities
         check_city: city name
         Return: city id or None
@@ -53,12 +53,23 @@ class NrgtkAPI(DeliveryAPI):
         resp = requests.get(url, headers=self.request_header, params={'token': self.user_token})
 
         if resp.status_code == 200:
+            region = None
+            if check_region:
+                region = self._get_clean_region(check_region)
+
             resp_json = resp.json()
             city_id = 0
+
             for city in resp_json['cityList']:
-                if city['name'].lower().startswith(check_city.lower()):
-                    city_id = city['id']
-                    return city_id
+                if region:
+                    if city['name'].lower().startswith(check_city.lower()) and region in city['description'].lower():
+                        city_id = city['id']
+                        return city_id
+                else:
+                    if city['name'].lower().startswith(check_city.lower()):
+                        city_id = city['id']
+                        return city_id
+
             if not city_id:
                 self.result['error'] = f'{check_city}: нет терминала'
         else:
@@ -70,8 +81,8 @@ class NrgtkAPI(DeliveryAPI):
         """ Create final body for request to API
         Return: request body
         """
-        derival_id = self._get_cities_id(self.derival_city)
-        arrival_id = self._get_cities_id(self.arrival_city)
+        derival_id = self._get_cities_id(self.derival_city, self.derival_region)
+        arrival_id = self._get_cities_id(self.arrival_city, self.arrival_region)
 
         if derival_id and arrival_id:
 

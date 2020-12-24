@@ -20,6 +20,8 @@ def get_delivery_info(cleaned_data):
     info = {
         'derival_city': cleaned_data['derival_city'],
         'arrival_city': cleaned_data['arrival_city'],
+        'derival_region': cleaned_data['derival_region'],
+        'arrival_region': cleaned_data['arrival_region'],
         'produce_date': '',
         'cargo': {
             'length': length,
@@ -35,18 +37,17 @@ def get_delivery_info(cleaned_data):
 
 @login_required
 def index(request):
+    context = {}
     if request.method == 'POST':
         form = CalculatorForm(request.POST)
         if form.is_valid():
             info = get_delivery_info(form.cleaned_data)
             calculator = Calculator(info)
             results = calculator.calculate()
-            context = {
-                'form': form,
-                'results': results
-            }
+            context['form'] = form
+            context['results'] = results
     else:
         form = CalculatorForm()
-        context = {'form': form}
+        context['form'] = form
 
     return render(request, 'calculator/index.html', context)

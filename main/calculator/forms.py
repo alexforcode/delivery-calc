@@ -15,6 +15,14 @@ class CalculatorForm(forms.Form):
         label='Куда',
         max_length=100
     )
+    derival_region = forms.CharField(
+        max_length=100,
+        required=False
+    )
+    arrival_region = forms.CharField(
+        max_length=100,
+        required=False
+    )
     width = forms.FloatField(
         label='Ширина',
         min_value=0,
@@ -60,8 +68,12 @@ class CalculatorForm(forms.Form):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Field('derival_city', wrapper_class='col-md-6'),
-                Field('arrival_city', wrapper_class='col-md-6'),
+                Field('derival_city', wrapper_class='col-md-6', placeholder='Город'),
+                Field('arrival_city', wrapper_class='col-md-6', placeholder='Город'),
+            ),
+            Row(
+                Field('derival_region', wrapper_class='col-md-6', placeholder='Регион', id='derival_region'),
+                Field('arrival_region', wrapper_class='col-md-6', placeholder='Регион', id='arrival_region'),
             ),
             Row(
                 Field('weight', wrapper_class='col-md-4'),
@@ -88,6 +100,8 @@ class CalculatorForm(forms.Form):
                 Submit('submit', 'Рассчитать')
             )
         )
+        self.fields['derival_region'].label = False
+        self.fields['arrival_region'].label = False
 
     def clean(self):
         cleaned_data = super().clean()

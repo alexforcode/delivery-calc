@@ -16,21 +16,30 @@ class BaikalAPI(DeliveryAPI):
         super().__init__(delivery_info)
         self.result['name'] = 'Байкал Сервис'
 
-    def _get_city_guid(self, city: str):
+    def _get_city_guid(self, check_city: str, check_region: str):
         """ Get guid (code) of city
-        city: city name
+        check_city: city name
+        check_region: region name
         Return: guid or None
         """
-        url = f'{self.base_api_url}/fias/cities?text={city.lower()}'
+        url = f'{self.base_api_url}/fias/cities?text={check_city.lower()}'
         resp = requests.get(url, auth=(self.apikey, ''), headers=self.request_headers)
 
         if resp.status_code == 200:
-            resp_json = resp.json()
+            cities = resp.json()
+
             try:
-                guid = resp_json[0]['guid']
-                return guid
+                if check_region:
+                    region = self._get_clean_region(check_region)
+                    for city in cities:
+                        if region in city['parents'].lower():
+                            return city['guid']
+
+                    self.result['error'] = f'{check_city} ({check_region}): нет терминала'
+                else:
+                    return cities[0]['guid']
             except IndexError or KeyError:
-                self.result['error'] = f'{city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет терминала'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -40,8 +49,8 @@ class BaikalAPI(DeliveryAPI):
         """ Create final body for request to API
         Return: request body
         """
-        derival_city_id = self._get_city_guid(self.derival_city)
-        arrival_city_id = self._get_city_guid(self.arrival_city)
+        derival_city_id = self._get_city_guid(self.derival_city, self.derival_region)
+        arrival_city_id = self._get_city_guid(self.arrival_city, self.arrival_region)
 
         if derival_city_id and arrival_city_id:
             body = {
