@@ -15,23 +15,31 @@ class PecomAPI(DeliveryAPI):
         self.base_api_url = 'https://kabinet.pecom.ru/api/v1'
         self.login = config['pecom']['login']
         self.apikey = config['pecom']['apikey']
+        self.branches = self._get_all_branches()
         super().__init__(delivery_info)
         self.result['name'] = 'ПЭК'
 
-    def _check_branch_region(self, branch_id: str, region: str):
-        """ Check if branch in region
-        Return: True if branch in region or False
+    def _get_all_branches(self):
+        """ Get all branches of Pecom
+        Return branches json or None
         """
         url = f'{self.base_api_url}/branches/all/'
         resp = requests.post(url,
                              auth=(self.login, self.apikey),
                              headers={'content-type': 'application/json'})
         if resp.status_code == 200:
-            branches = resp.json()['branches']
-            for branch in branches:
-                if branch['bitrixId'] == branch_id and \
-                        region in branch['divisions'][0]['warehouses'][0]['addressDivision'].lower():
-                    return True
+            return resp.json()['branches']
+
+        return None
+
+    def _check_branch_region(self, branch_id: str, region: str):
+        """ Check if branch in region
+        Return: True if branch in region or False
+        """
+        for branch in self.branches:
+            if branch['bitrixId'] == branch_id and \
+                    region in branch['divisions'][0]['warehouses'][0]['addressDivision'].lower():
+                return True
 
         return False
 
