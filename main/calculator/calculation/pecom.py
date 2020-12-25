@@ -58,7 +58,7 @@ class PecomAPI(DeliveryAPI):
             cities = resp.json()
             if cities['success']:
                 try:
-                    if len(cities['items']) > 1 and check_region:
+                    if check_region:
                         region = self._get_clean_region(check_region)
                         for city in cities['items']:
                             if self._check_branch_region(city['branchId'], region):

@@ -53,12 +53,11 @@ class NrgtkAPI(DeliveryAPI):
         resp = requests.get(url, headers=self.request_header, params={'token': self.user_token})
 
         if resp.status_code == 200:
+            resp_json = resp.json()
+            city_id = 0
             region = None
             if check_region:
                 region = self._get_clean_region(check_region)
-
-            resp_json = resp.json()
-            city_id = 0
 
             for city in resp_json['cityList']:
                 if region:
@@ -71,7 +70,7 @@ class NrgtkAPI(DeliveryAPI):
                         return city_id
 
             if not city_id:
-                self.result['error'] = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city} ({check_city}): нет терминала'
         else:
             self.result['error'] = 'Ошибка соединения'
 

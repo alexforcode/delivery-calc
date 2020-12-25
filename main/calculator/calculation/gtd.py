@@ -26,15 +26,15 @@ class GtdAPI(DeliveryAPI):
         check_region: region name
         Return: region code or None
         """
-        check_region = self._get_clean_region(check_region)
         url = f'{self.base_api_url}/tdd/region/get-list/'
         resp = requests.post(url, headers=self.request_headers)
 
         if resp.status_code == 200:
             regions = resp.json()
+            clean_region = self._get_clean_region(check_region)
 
             for region in regions:
-                if check_region in region['name'].lower():
+                if clean_region in region['name'].lower():
                     code = region['code']
                     return code
         else:
@@ -52,12 +52,11 @@ class GtdAPI(DeliveryAPI):
         resp = requests.post(url, headers=self.request_headers)
 
         if resp.status_code == 200:
+            cities = resp.json()
+            code = 0
             region_code = None
             if check_region:
                 region_code = self._get_region_code(check_region)
-
-            cities = resp.json()
-            code = 0
 
             for city in cities:
                 if region_code:
@@ -70,7 +69,7 @@ class GtdAPI(DeliveryAPI):
                         return code
 
             if not code:
-                self.result['error'] = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city} ({check_region}): нет терминала'
         else:
             self.result['error'] = 'Ошибка соединения'
 
