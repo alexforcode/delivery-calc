@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import json
 
 
 class DeliveryAPI(metaclass=ABCMeta):
@@ -45,3 +46,12 @@ class DeliveryAPI(metaclass=ABCMeta):
             region = region.split(' ')[0]
 
         return region
+
+    @staticmethod
+    def _save_json_to_file(data: dict, name: str):
+        """ Save json data to file
+        data: dict to save
+        name: file name
+        """
+        with open(f'assets/data/{name}.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
