@@ -113,6 +113,7 @@ class NrgtkAPI(DeliveryAPI):
         if not self.result['error']:
             resp = requests.post(url, headers=self.request_header, json=self.body)
             self._user_logout()
+            print(resp.json())
 
             if resp.status_code == 200:
                 return resp.json()
@@ -135,10 +136,14 @@ class NrgtkAPI(DeliveryAPI):
 
         try:
             for transfer in calculation['transfer']:
-                if transfer['typeId'] == 1:
+                if transfer['typeId'] in (1, 3):
                     cost = round(float(transfer['price']), 2)
                     days = transfer['interval'].split()[0]
-                    self.result['cost'] = f'{cost:.2f}'
+
+                    if transfer['typeId'] == 1:
+                        self.result['cost'] = f'{cost:.2f} (авто)'
+                    else:
+                        self.result['cost'] = f'{cost:.2f} (ж/д)'
                     self.result['days'] = days
                     break
             else:
