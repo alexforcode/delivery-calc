@@ -27,19 +27,15 @@ class BaikalAPI(DeliveryAPI):
 
         if resp.status_code == 200:
             cities = resp.json()
-
             try:
                 if check_region:
                     region = self._get_clean_region(check_region)
                     for city in cities:
                         if region in city['parents'].lower():
                             return city['guid']
-
-                    self.result['error'] = f'{check_city} ({check_region}): нет терминала'
-                else:
-                    return cities[0]['guid']
+                return cities[0]['guid']
             except IndexError or KeyError:
-                self.result['error'] = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет доставки'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -90,8 +86,8 @@ class BaikalAPI(DeliveryAPI):
             }
 
             return body
-        else:
-            return None
+
+        return None
 
     def _get_delivery_calc(self):
         """ Get result of calculation in json format

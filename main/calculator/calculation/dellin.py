@@ -47,7 +47,8 @@ class DellinAPI(DeliveryAPI):
 
     def _get_city_code(self, check_city: str, check_region: str):
         """ Get code of city
-        city: city name
+        check_city: city name
+        check_region: region name
         Return: city code or None
         """
         url = f'{self.base_api_url}/v2/public/kladr.json'
@@ -62,15 +63,16 @@ class DellinAPI(DeliveryAPI):
             try:
                 if check_region:
                     region = self._get_clean_region(check_region)
-                    for city_json in resp_json['cities']:
-                        if region in city_json['region_name'].lower():
-                            return city_json['code']
+
+                    for city in resp_json['cities']:
+                        if region in city['region_name'].lower():
+                            return city['code']
 
                     self.result['error'] = f'{check_city} ({check_region}): нет терминала'
-                else:
-                    return resp_json['cities'][0]['code']
+
+                return resp_json['cities'][0]['code']
             except IndexError or KeyError:
-                self.result['error'] = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет доставки'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -143,8 +145,8 @@ class DellinAPI(DeliveryAPI):
                 body['cargo']['weight'] = round(weight / quantity, 1)
 
             return body
-        else:
-            return None
+
+        return None
 
     def _get_delivery_calc(self):
         """ Get result of calculation in json format
@@ -160,7 +162,7 @@ class DellinAPI(DeliveryAPI):
             if resp.status_code == 200:
                 return resp.json()
             else:
-                self.result['error'] = 'Ошибка расчета'
+                self.result['error'] = 'Ошибка соединения'
 
         return None
 

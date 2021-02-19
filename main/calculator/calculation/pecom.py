@@ -45,7 +45,8 @@ class PecomAPI(DeliveryAPI):
 
     def _get_city_id(self, check_city: str, check_region: str):
         """ Get id of terminal branch in city
-        city: city name
+        check_city: city name
+        check_region: region name
         Return: branch id or None
         """
         url = f'{self.base_api_url}/branches/findbytitle/'
@@ -67,9 +68,9 @@ class PecomAPI(DeliveryAPI):
                     else:
                         return int(cities['items'][0]['branchId'])
                 except IndexError or KeyError:
-                    self.result['error'] = f'{check_city}: нет терминала'
+                    self.result['error'] = f'{check_city}: нет доставки'
             else:
-                self.result['error'] = f'{check_city}: нет терминала'
+                self.result['error'] = f'{check_city}: нет доставки'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -123,12 +124,11 @@ class PecomAPI(DeliveryAPI):
             }
 
             return body
-        else:
-            return None
+
+        return None
 
     def _get_delivery_calc(self):
         """ Get results of calculation in json format
-        body: data for request
         Return: results or None
         """
         url = f'{self.base_api_url}/calculator/calculateprice/'

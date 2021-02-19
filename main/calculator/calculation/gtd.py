@@ -31,12 +31,11 @@ class GtdAPI(DeliveryAPI):
 
         if resp.status_code == 200:
             regions = resp.json()
-            clean_region = self._get_clean_region(check_region)
+            check_region = self._get_clean_region(check_region)
 
             for region in regions:
-                if clean_region in region['name'].lower():
-                    code = region['code']
-                    return code
+                if check_region in region['name'].lower():
+                    return region['code']
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -53,23 +52,25 @@ class GtdAPI(DeliveryAPI):
 
         if resp.status_code == 200:
             cities = resp.json()
-            code = 0
-            region_code = None
-            if check_region:
-                region_code = self._get_region_code(check_region)
+            matches = []
 
             for city in cities:
-                if region_code:
-                    if city['name'].lower().startswith(check_city.lower()) and city['region_code'] == region_code:
-                        code = city['code']
-                        return code
-                else:
-                    if city['name'].lower().startswith(check_city.lower()):
-                        code = city['code']
-                        return code
+                if city['name'].lower().startswith(check_city.lower()):
+                    matches.append(city)
 
-            if not code:
-                self.result['error'] = f'{check_city} ({check_region}): нет терминала'
+            if len(matches) == 1:
+                return matches[0]['code']
+            elif len(matches) > 1:
+                if check_region:
+                    region_code = self._get_region_code(check_region)
+                    for city in matches:
+                        if city['region_code'] == region_code:
+                            return city['code']
+                    self.result['error'] = f'{check_city} ({check_region}): нет терминала'
+                else:
+                    return matches[0]['code']
+            else:
+                self.result['error'] = f'{check_city}: нет доставки'
         else:
             self.result['error'] = 'Ошибка соединения'
 
@@ -104,8 +105,8 @@ class GtdAPI(DeliveryAPI):
             }
 
             return body
-        else:
-            return None
+
+        return None
 
     def _get_delivery_calc(self):
         """ Get results of calculation in json format

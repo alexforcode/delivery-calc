@@ -8,6 +8,7 @@ from .pecom import PecomAPI
 from .gtd import GtdAPI
 from .baikal import BaikalAPI
 from .nrgtk import NrgtkAPI
+from .dpd import DPDApi
 
 
 class Calculator:
@@ -25,6 +26,7 @@ class Calculator:
             GtdAPI,
             BaikalAPI,
             NrgtkAPI,
+            DPDApi,
         ]
         self.result = []
 
